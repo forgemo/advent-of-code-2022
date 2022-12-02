@@ -15,3 +15,98 @@ path = "src/day_01.rs"
 [[bin]]
 name = "day_02"
 path = "src/day_02.rs"
+
+
+[[bin]]
+name = "day_03"
+path = "src/day_03.rs"
+
+
+[[bin]]
+name = "day_04"
+path = "src/day_04.rs"
+
+
+[[bin]]
+name = "day_05"
+path = "src/day_05.rs"
+
+
+[[bin]]
+name = "day_06"
+path = "src/day_06.rs"
+
+
+[[bin]]
+name = "day_07"
+path = "src/day_07.rs"
+
+
+[[bin]]
+name = "day_08"
+path = "src/day_08.rs"
+
+[[bin]]
+name = "day_09"
+path = "src/day_09.rs"
+
+
+[[bin]]
+name = "day_10"
+path = "src/day_10.rs"
+
+[[bin]]
+name = "day_11"
+path = "src/day_11.rs"
+
+[[bin]]
+name = "day_12"
+path = "src/day_12.rs"
+
+[[bin]]
+name = "day_13"
+path = "src/day_13.rs"
+
+[[bin]]
+name = "day_14"
+path = "src/day_14.rs"
+
+[[bin]]
+name = "day_15"
+path = "src/day_15.rs"
+
+[[bin]]
+name = "day_16"
+path = "src/day_16.rs"
+
+[[bin]]
+name = "day_17"
+path = "src/day_17.rs"
+
+[[bin]]
+name = "day_18"
+path = "src/day_18.rs"
+
+[[bin]]
+name = "day_19"
+path = "src/day_19.rs"
+
+[[bin]]
+name = "day_20"
+path = "src/day_20.rs"
+
+[[bin]]
+name = "day_21"
+path = "src/day_21.rs"
+
+[[bin]]
+name = "day_22"
+path = "src/day_22.rs"
+
+[[bin]]
+name = "day_23"
+path = "src/day_23.rs"
+
+[[bin]]
+name = "day_24"
+path = "src/day_24.rs"
