@@ -8,7 +8,7 @@ fn main() {
     let calories_per_elve = input
         .split("\n\n")
         .map(|elve|elve
-            .split("\n")
+            .split('\n')
             .map(|s|s.parse::<usize>().unwrap()).sum()
         ).collect_vec();
 
