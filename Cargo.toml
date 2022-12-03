@@ -6,6 +6,7 @@ edition = "2021"
 
 [dependencies]
 itertools = "0.10"
+tuple = "0.5"
 
 [[bin]]
 name = "day_01"
