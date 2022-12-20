@@ -9,6 +9,8 @@ itertools = "0.10"
 tuple = "0.5"
 pathfinding = "4"
 ndarray = "0.15"
+id-arena = "2.2"
+rayon = "1.6"
 
 [[bin]]
 name = "day_01"
