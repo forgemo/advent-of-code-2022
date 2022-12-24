@@ -1,16 +1,15 @@
 extern crate core;
 
-use std::collections::{BTreeMap, BTreeSet, HashMap, HashSet};
-use std::collections::hash_map::DefaultHasher;
+use std::collections::{BTreeMap, BTreeSet};
 use std::fs;
-use std::hash::{Hash, Hasher};
-use std::time::Instant;
-use itertools::{all, Itertools};
-use pathfinding::prelude::{astar, astar_bag, bfs, dijkstra};
+
+use itertools::{Itertools};
+use pathfinding::prelude::{astar};
+
 use crate::Action::{MoveTo, OpenValve, Wait};
 
 fn main() {
-    {
+    { // sample
         let input_sample = fs::read_to_string("input/day_16_sample.txt").unwrap();
         let arena = parse_input(&input_sample);
         let start_valve = &arena["AA"];
@@ -19,33 +18,30 @@ fn main() {
 
         let start = State::new(start_valve);
 
-        let solution_1 = solve_star(start.clone(), &context, true);
+        let solution_1 = solve(start.clone(), &context, true);
         assert_eq!(solution_1, 1651);
-        println!("solution 1 sample ok");
 
-        let solution_2 = solve_star(start, &context.with_max_minutes(26), false);
+        let solution_2 = solve(start.clone(), &context.with_max_minutes(26), false);
         assert_eq!(solution_2, 1707);
-        println!("solution 2 sample ok");
     }
 
 
+    { // real input
+        let input = fs::read_to_string("input/day_16.txt").unwrap();
 
-    let input = fs::read_to_string("input/day_16.txt").unwrap();
+        let arena = parse_input(&input);
+        let start_valve = &arena["AA"];
 
-    let arena = parse_input(&input);
-    let start_valve = &arena["AA"];
+        let context = Context::new(&arena, 30);
 
-    let context = Context::new(&arena, 30);
+        let start = State::new(start_valve);
 
-    let start = State::new(start_valve);
+        let solution_1 = solve(start.clone(), &context, true);
+        assert_eq!(solution_1, 1617);
 
-    let solution_1 = solve_star(start.clone(), &context, true);
-    assert_eq!(solution_1, 1617);
-    println!("solution 1 ok");
-
-    let solution_2 = solve_star(start, &context.with_max_minutes(26), false);
-    assert_eq!(solution_2, 0);
-
+        let solution_2 = solve(start, &context.with_max_minutes(26), false);
+        assert_eq!(solution_2, 2171);
+    }
 }
 
 #[derive(Clone)]
@@ -67,19 +63,17 @@ impl<'a> Context<'a> {
             move_action_map,
             ignore_valves,
             relevant_valves,
-            max_minutes
+            max_minutes,
         }
     }
 
-    fn with_max_minutes(&self, max_minutes: usize) -> Self{
+    fn with_max_minutes(&self, max_minutes: usize) -> Self {
         Self {
             max_minutes,
-            .. self.clone()
+            ..self.clone()
         }
     }
 }
-
-// graph model
 
 #[derive(Clone, Eq, PartialEq, Hash, Debug)]
 struct State<'a> {
@@ -196,19 +190,8 @@ impl<'a> State<'a> {
             .collect()
     }
 
-    fn state_key(&self) -> u64 {
-        let mut h = DefaultHasher::new();
-        self.after_minute.hash(&mut h);
-        self.human_position.hash(&mut h);
-        self.elephant_position.hash(&mut h);
-        self.open_valves.hash(&mut h);
-        self.total_released_pressure.hash(&mut h);
-        h.finish()
-    }
 }
 
-
-// base model
 
 fn build_move_action_map(arena: &BTreeMap<String, Valve>) -> BTreeMap<&Valve, Vec<Action>> {
     arena.values().map(|v| {
@@ -226,8 +209,30 @@ struct Valve {
     tunnels_to: BTreeSet<String>,
 }
 
+fn solve<'a>(start: State, context: &'a Context<'a>, skip_elephant: bool) -> usize {
+    let best_rpm = context.arena.values().map(|v| v.flow_rate).sum::<usize>();
+
+    let (path, _) = astar(&start,
+                          |s| {
+                              s.successors(context, skip_elephant).into_iter().map(move |succ| {
+                                  let cost = (context.max_minutes + 1 - succ.after_minute) * (best_rpm - succ.pressure_rpm);
+                                  (succ, cost)
+                              }).collect_vec()
+                          },
+                          |s| {
+                              let minutes_left = context.max_minutes + 1 - s.after_minute;
+                              let closed_valves = context.relevant_valves.difference(&s.open_valves).map(|v| v.flow_rate).sorted().rev().take(minutes_left).collect_vec();
+                              let potential_rpm_of_top_closed = closed_valves.iter().sum::<usize>(); // todo optimize
+                              best_rpm - potential_rpm_of_top_closed
+                          },
+                          |s| s.after_minute == context.max_minutes,
+    ).unwrap();
+
+    path.last().unwrap().total_released_pressure
+}
+
 fn parse_input(input: &str) -> BTreeMap<String, Valve> {
-    let mut valves: BTreeMap<String, Valve> = input.lines().map(|l| {
+    let valves: BTreeMap<String, Valve> = input.lines().map(|l| {
         let label = l.split(' ').nth(1).unwrap().to_string();
         let flow_rate = l.split('=').nth(1).unwrap().split(';').next().unwrap().parse::<usize>().unwrap();
         let tunnels_to = l.replace(',', "")
@@ -245,65 +250,3 @@ fn parse_input(input: &str) -> BTreeMap<String, Valve> {
     }).collect();
     valves
 }
-
-
-fn solve<'a>(start: State<'a>, context: &'a Context<'a>, skip_elephant: bool) -> (usize, State<'a>) {
-    let mut max = 0;
-    let mut max_state = start.clone();
-
-    let mut visited = BTreeSet::new();
-    let mut stack = vec![start];
-
-    while let Some(state) = stack.pop() {
-        let (keys, states): (Vec<_>, Vec<_>) = state
-            .successors(context, skip_elephant)
-            .into_iter()
-            .map(|s| (s.state_key(), s))
-            .filter(|(k, _)| !visited.contains(k))
-            .unzip();
-
-        if state.total_released_pressure > max {
-            max = state.total_released_pressure;
-            max_state = state.clone();
-            println!("new max: {} ", state.total_released_pressure);
-        }
-
-        visited.insert(state.state_key());
-        visited.extend(keys);
-        stack.extend(states);
-    }
-
-    (max, max_state)
-}
-
-fn solve_star<'a>(start: State, context: &'a Context<'a>, skip_elephant: bool) -> usize {
-    let best_rpm = context.arena.values().map(|v| v.flow_rate).sum::<usize>();
-
-    let time = Instant::now();
-    let (path, _) = astar(&start,
-                                |s| {
-                                    s.successors(context, skip_elephant).into_iter().map(move |succ| {
-                                        let cost = (context.max_minutes + 1 - succ.after_minute) * (best_rpm - succ.pressure_rpm);
-                                        (succ, cost)
-                                    }).collect_vec()
-                                },
-                                |s|{
-                                    let minutes_left = context.max_minutes +1 - s.after_minute;
-                                    let closed_valves = context.relevant_valves.difference(&s.open_valves).map(|v|v.flow_rate).sorted().rev().take(minutes_left).collect_vec();
-                                    let potential_rpm_of_top_closed = closed_valves.iter().sum::<usize>(); // todo optimize
-                                    (best_rpm - potential_rpm_of_top_closed)
-                                },
-                                |s| s.after_minute == context.max_minutes,
-    ).unwrap();
-    println!("time {:?}", time.elapsed());
-
-    //path.iter().for_each(|s| {
-    //    println!("== After Minute {} ==", s.after_minute);
-    //    println!("Valves {:?} are open, rpm at {}, released {}", s.open_valves.iter().map(|v| &v.label).join(", "), s.pressure_rpm, s.total_released_pressure);
-    //    println!("You are at {}", s.human_position.label);
-    //    println!()
-    //});
-
-    path.last().unwrap().total_released_pressure
-}
-
